@@ -3,11 +3,14 @@ import json
 
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import AsyncWebsocketConsumer
+import socket
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
+    user_name = ''
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
+        self.user_name = self.scope["url_route"]["kwargs"]["user_name"]
         self.room_group_name = f"chat_{self.room_name}"
 
         # Join room group
@@ -28,9 +31,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         text_data_json = json.loads(text_data)
         message = text_data_json["message"]
 
-        # Send message to room group
+        # 여기서 조건달고 여러 함수들 실행하기
+
+        
         await self.channel_layer.group_send(
-            self.room_group_name, {"type": "chat.message", "message": message}
+            self.room_group_name, {"type": "chat.client", "message": message, "user_name": self.user_name}
         )
 
     # Receive message from room group
@@ -39,3 +44,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Send message to WebSocket
         await self.send(text_data=json.dumps({"message": message}))
+    
+
+
+
+    async def chat_client(self, event):
+        message = event["message"]
+        userName = event["user_name"]
+
+        await self.send(text_data=json.dumps({"message": userName + " : " + message}))
